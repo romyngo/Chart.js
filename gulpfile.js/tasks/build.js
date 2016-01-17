@@ -6,7 +6,6 @@ var path = require('path');
 var replace = require('gulp-replace');
 var uglify = require('gulp-uglify');
 var util = require('gulp-util');
-var webpack = require('webpack');
 
 var config = require('../config');
 var package = require('../../package.json');
@@ -16,16 +15,14 @@ function buildTask() {
 	return gulp.src(path.join(config.root.dest, 'Chart.js'))
 		.pipe(gulpWebpack({
 			context: process.cwd(),
-			//entry: ['Chart.js'],
+			externals: {
+				moment: "moment"
+			},
 			output: {
 				library: "Chart",
 				libraryTarget: "umd",
 				umdNamedDefine: true
 			},
-			plugins: [
-				new webpack.IgnorePlugin(/^\.\/locale$/, [/moment$/]),
-				//new webpack.IgnorePlugin(/^moment$/)
-			],
 			resolve: {
 				root: [process.cwd(), path.join(process.cwd(), 'node_modules')]
 			}
