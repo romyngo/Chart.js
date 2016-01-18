@@ -368,7 +368,7 @@ The bar controller has a special property that you should be aware of. To correc
 
 ### Building Chart.js
 
-Chart.js uses <a href="http://gulpjs.com/" target="_blank">gulp</a> to build the library into a single JavaScript file. 
+Chart.js uses <a href="http://gulpjs.com/" target="_blank">gulp</a> and <a href="https://webpack.github.io/" target="_blank">Webpack</a> to build the library into a single JavaScript file. The unminifed source file, Chart.js, will use the CommonJS dependecy loading. The minified file, Chart.min.js, will be wrapped via webpack to include the color parsing dependency. Moment.js will still need to be loaded externally.
 
 Firstly, we need to ensure development dependencies are installed. With node and npm installed, after cloning the Chart.js repo to a local directory, and navigating to that directory in the command line, we can run the following:
 

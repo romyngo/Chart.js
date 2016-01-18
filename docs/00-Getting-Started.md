@@ -8,7 +8,7 @@ anchor: getting-started
 First we need to include the Chart.js library on the page. The library occupies a global variable of `Chart`.
 
 ```html
-<script src="Chart.js"></script>
+<script src="Chart.min.js"></script>
 ```
 
 Alternatively, if you're using an AMD loader for JavaScript modules, that is also supported in the Chart.js core. Please note: the library will still occupy a global variable of `Chart`, even if it detects `define` and `define.amd`. If this is a problem, you can call `noConflict` to restore the global Chart variable to it's previous owner.
@@ -25,6 +25,14 @@ require(['path/to/Chartjs'], function(Chart){
 });
 ```
 
+#### Using Chart.js with Browserify or Webpack
+
+The release of v2.0.0 adds better support for Browserify/Webpack builds. Simply include the unminified Chart.js file into your application and build as normal. You will probably want to suppress loading of moment.js locales to keep your build size to a minimum. If you are not planning on using the time scale, you can also suppress loading of moment.js itself.
+
+```javascript
+
+```
+
 You can also grab Chart.js using bower, npm, or CDN:
 
 ```bash
@@ -34,7 +42,7 @@ bower install Chart.js --save
 npm install chart.js --save
 ```
 
-https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.0.0-beta/Chart.js
+https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.0.0-beta/Chart.min.js
 
 ###Creating a Chart
 
