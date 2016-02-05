@@ -9,21 +9,21 @@
 		custom: null,
 		mode: 'single',
 		backgroundColor: "rgba(0,0,0,0.8)",
-		titleFontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
-		titleFontSize: 12,
+		titleFontFamily: Chart.defaults.global.defaultFontFamily,
+		titleFontSize: Chart.defaults.global.defaultFontSize,
 		titleFontStyle: "bold",
 		titleSpacing: 2,
 		titleMarginBottom: 6,
 		titleColor: "#fff",
 		titleAlign: "left",
-		bodyFontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
-		bodyFontSize: 12,
-		bodyFontStyle: "normal",
+		bodyFontFamily: Chart.defaults.global.defaultFontFamily,
+		bodyFontSize: Chart.defaults.global.defaultFontSize,
+		bodyFontStyle: Chart.defaults.global.defaultFontStyle,
 		bodySpacing: 2,
 		bodyColor: "#fff",
 		bodyAlign: "left",
-		footerFontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
-		footerFontSize: 12,
+		footerFontFamily: Chart.defaults.global.defaultFontFamily,
+		footerFontSize: Chart.defaults.global.defaultFontSize,
 		footerFontStyle: "bold",
 		footerSpacing: 2,
 		footerMarginTop: 6,
@@ -263,7 +263,7 @@
 						  	backgroundColor: active._view.backgroundColor
 						  });
 						}
-					}, this);
+					});
 
 					tooltipPosition = this.getAveragePosition(this._active);
 					tooltipPosition.y = this._active[0]._yScale.getPixelForDecimal(0.5);
@@ -328,7 +328,7 @@
 			ctx.font = helpers.fontString(vm.bodyFontSize, vm._bodyFontStyle, vm._bodyFontFamily);
 			helpers.each(vm.beforeBody.concat(vm.afterBody), function(line) {
 				size.width = Math.max(size.width, ctx.measureText(line).width);
-			}, this);
+			});
 			helpers.each(vm.body, function(line) {
 				size.width = Math.max(size.width, ctx.measureText(line).width + (this._options.tooltips.mode !== 'single' ? (vm.bodyFontSize + 2) : 0));
 			}, this);
@@ -360,13 +360,14 @@
 			if (this._model.yAlign === 'center') {
 				lf = function(x) { return x <= midX; };
 				rf = function(x) { return x > midX; };
-				olf = function(x) { return x + size.width > _this._chart.width; };
-				orf = function(x) { return x - size.width < 0; };
-				yf = function(y) { return y <= midY ? 'top' : 'bottom'; };
 			} else {
 				lf = function(x) { return x <= (size.width / 2); };
 				rf = function(x) { return x >= (_this._chart.width - (size.width / 2)); };
 			}
+			
+			olf = function(x) { return x + size.width > _this._chart.width; };
+			orf = function(x) { return x - size.width < 0; };
+			yf = function(y) { return y <= midY ? 'top' : 'bottom'; };
 
 			if (lf(this._model.x)) {
 				this._model.xAlign = 'left';
@@ -492,7 +493,7 @@
 					if (i + 1 === vm.title.length) {
 						pt.y += vm.titleMarginBottom - vm.titleSpacing; // If Last, add margin, remove spacing
 					}
-				}, this);
+				});
 			}
 		},
 		drawBody: function drawBody(pt, vm, ctx, opacity) {
@@ -551,7 +552,7 @@
 				helpers.each(vm.footer, function(footer) {
 					ctx.fillText(footer, pt.x, pt.y);
 					pt.y += vm.footerFontSize + vm.footerSpacing;
-				}, this);
+				});
 			}
 		},
 		draw: function draw() {

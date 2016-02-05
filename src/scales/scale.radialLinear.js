@@ -34,16 +34,21 @@
 
 		pointLabels: {
 			//String - Point label font declaration
-			fontFamily: "'Arial'",
+			fontFamily: Chart.defaults.global.defaultFontFamily,
 
 			//String - Point label font weight
-			fontStyle: "normal",
+			fontStyle: Chart.defaults.global.defaultFontStyle,
 
 			//Number - Point label font size in pixels
 			fontSize: 10,
 
 			//String - Point label font colour
-			fontColor: "#666",
+			fontColor: Chart.defaults.global.defaultFontColor,
+
+			//Function - Used to convert point labels
+			callback: function(label) {
+				return label;
+			}
 		},
 	};
 
@@ -169,11 +174,14 @@
 
 			this.zeroLineIndex = this.ticks.indexOf(0);
 		},
+		convertTicksToLabels: function() {
+			Chart.Scale.prototype.convertTicksToLabels.call(this);
+
+			// Point labels
+			this.pointLabels = this.chart.data.labels.map(this.options.pointLabels.callback, this);
+		},
 		getLabelForIndex: function(index, datasetIndex) {
 			return +this.getRightValue(this.chart.data.datasets[datasetIndex].data[index]);
-		},
-		getCircumference: function() {
-			return ((Math.PI * 2) / this.getValueCount());
 		},
 		fit: function() {
 			/*
@@ -227,7 +235,7 @@
 			for (i = 0; i < this.getValueCount(); i++) {
 				// 5px to space the text slightly out - similar to what we do in the draw function.
 				pointPosition = this.getPointPosition(i, largestPossibleRadius);
-				textWidth = this.ctx.measureText(this.options.ticks.callback(this.chart.data.labels[i])).width + 5;
+				textWidth = this.ctx.measureText(this.pointLabels[i] ? this.pointLabels[i] : '').width + 5;
 				if (i === 0 || i === this.getValueCount() / 2) {
 					// If we're at index zero, or exactly the middle, we're at exactly the top/bottom
 					// of the radar chart, so text will be aligned centrally, so we'll half it and compare
@@ -387,8 +395,8 @@
 						ctx.font = helpers.fontString(this.options.pointLabels.fontSize, this.options.pointLabels.fontStyle, this.options.pointLabels.fontFamily);
 						ctx.fillStyle = this.options.pointLabels.fontColor;
 
-						var labelsCount = this.chart.data.labels.length,
-							halfLabelsCount = this.chart.data.labels.length / 2,
+						var labelsCount = this.pointLabels.length,
+							halfLabelsCount = this.pointLabels.length / 2,
 							quarterLabelsCount = halfLabelsCount / 2,
 							upperHalf = (i < quarterLabelsCount || i > labelsCount - quarterLabelsCount),
 							exactQuarter = (i === quarterLabelsCount || i === labelsCount - quarterLabelsCount);
@@ -411,7 +419,7 @@
 							ctx.textBaseline = 'top';
 						}
 
-						ctx.fillText(this.chart.data.labels[i], pointLabelPosition.x, pointLabelPosition.y);
+						ctx.fillText(this.pointLabels[i] ? this.pointLabels[i] : '', pointLabelPosition.x, pointLabelPosition.y);
 					}
 				}
 			}

@@ -58,6 +58,7 @@
 			this.updateLayout();
 			this.resetElements();
 			this.initToolTip();
+			this.draw();
 			this.update();
 
 			// TODO
@@ -78,10 +79,14 @@
 		},
 
 		resize: function resize(silent) {
-			this.stop();
 			var canvas = this.chart.canvas;
 			var newWidth = helpers.getMaximumWidth(this.chart.canvas);
 			var newHeight = (this.options.maintainAspectRatio && isNaN(this.chart.aspectRatio) === false && isFinite(this.chart.aspectRatio) && this.chart.aspectRatio !== 0) ? newWidth / this.chart.aspectRatio : helpers.getMaximumHeight(this.chart.canvas);
+
+			var sizeChanged = this.chart.width !== newWidth || this.chart.height !== newHeight;
+
+			if (!sizeChanged)
+				return this;
 
 			canvas.width = this.chart.width = newWidth;
 			canvas.height = this.chart.height = newHeight;
@@ -89,6 +94,7 @@
 			helpers.retinaScale(this.chart);
 
 			if (!silent) {
+				this.stop();
 				this.update(this.options.responsiveAnimationDuration);
 			}
 
@@ -102,14 +108,14 @@
 				if (this.options.scales.xAxes && this.options.scales.xAxes.length) {
 					helpers.each(this.options.scales.xAxes, function(xAxisOptions, index) {
 						xAxisOptions.id = xAxisOptions.id || (defaultXAxisID + index);
-					}, this);
+					});
 				}
 
 				if (this.options.scales.yAxes && this.options.scales.yAxes.length) {
 					// Build the y axes
 					helpers.each(this.options.scales.yAxes, function(yAxisOptions, index) {
 						yAxisOptions.id = yAxisOptions.id || (defaultYAxisID + index);
-					}, this);
+					});
 				}
 			}
 		},
@@ -122,14 +128,16 @@
 				if (this.options.scales.xAxes && this.options.scales.xAxes.length) {
 					helpers.each(this.options.scales.xAxes, function(xAxisOptions, index) {
 						var ScaleClass = Chart.scaleService.getScaleConstructor(xAxisOptions.type);
-						var scale = new ScaleClass({
-							ctx: this.chart.ctx,
-							options: xAxisOptions,
-							chart: this,
-							id: xAxisOptions.id,
-						});
+						if (ScaleClass) {
+							var scale = new ScaleClass({
+								ctx: this.chart.ctx,
+								options: xAxisOptions,
+								chart: this,
+								id: xAxisOptions.id,
+							});
 
-						this.scales[scale.id] = scale;
+							this.scales[scale.id] = scale;
+						}
 					}, this);
 				}
 
@@ -137,29 +145,33 @@
 					// Build the y axes
 					helpers.each(this.options.scales.yAxes, function(yAxisOptions, index) {
 						var ScaleClass = Chart.scaleService.getScaleConstructor(yAxisOptions.type);
-						var scale = new ScaleClass({
-							ctx: this.chart.ctx,
-							options: yAxisOptions,
-							chart: this,
-							id: yAxisOptions.id,
-						});
+						if (ScaleClass) {
+							var scale = new ScaleClass({
+								ctx: this.chart.ctx,
+								options: yAxisOptions,
+								chart: this,
+								id: yAxisOptions.id,
+							});
 
-						this.scales[scale.id] = scale;
+							this.scales[scale.id] = scale;
+						}
 					}, this);
 				}
 			}
 			if (this.options.scale) {
 				// Build radial axes
 				var ScaleClass = Chart.scaleService.getScaleConstructor(this.options.scale.type);
-				var scale = new ScaleClass({
-					ctx: this.chart.ctx,
-					options: this.options.scale,
-					chart: this,
-				});
+				if (ScaleClass) {
+					var scale = new ScaleClass({
+						ctx: this.chart.ctx,
+						options: this.options.scale,
+						chart: this,
+					});
 
-				this.scale = scale;
+					this.scale = scale;
 
-				this.scales.radialScale = scale;
+					this.scales.radialScale = scale;
+				}
 			}
 
 			Chart.scaleService.addScalesToLayout(this);
@@ -191,8 +203,10 @@
 			Chart.layoutService.update(this, this.chart.width, this.chart.height);
 		},
 
-		buildOrUpdateControllers: function buildOrUpdateControllers(resetNewControllers) {
+		buildOrUpdateControllers: function buildOrUpdateControllers() {
 			var types = [];
+			var newControllers = [];
+
 			helpers.each(this.data.datasets, function(dataset, datasetIndex) {
 				if (!dataset.type) {
 					dataset.type = this.config.type;
@@ -205,10 +219,7 @@
 					dataset.controller.updateIndex(datasetIndex);
 				} else {
 					dataset.controller = new Chart.controllers[type](this, datasetIndex);
-
-					if (resetNewControllers) {
-						dataset.controller.reset();
-					}
+					newControllers.push(dataset.controller);
 				}
 			}, this);
 
@@ -220,12 +231,14 @@
 					}
 				}
 			}
+
+			return newControllers;
 		},
 
 		resetElements: function resetElements() {
 			helpers.each(this.data.datasets, function(dataset, datasetIndex) {
 				dataset.controller.reset();
-			}, this);
+			});
 		},
 
 		update: function update(animationDuration, lazy) {
@@ -233,19 +246,24 @@
 			this.tooltip._data = this.data;
 
 			// Make sure dataset controllers are updated and new controllers are reset
-			this.buildOrUpdateControllers(true);
+			var newControllers = this.buildOrUpdateControllers();
 
 			Chart.layoutService.update(this, this.chart.width, this.chart.height);
+
+			// Can only reset the new controllers after the scales have been updated
+			helpers.each(newControllers, function(controller) {
+				controller.reset();
+			});
 
 			// Make sure all dataset controllers have correct meta data counts
 			helpers.each(this.data.datasets, function(dataset, datasetIndex) {
 				dataset.controller.buildOrUpdateElements();
-			}, this);
+			});
 
 			// This will loop through any data and do the appropriate element update for the type
 			helpers.each(this.data.datasets, function(dataset, datasetIndex) {
 				dataset.controller.update();
-			}, this);
+			});
 			this.render(animationDuration, lazy);
 		},
 
@@ -296,7 +314,7 @@
 				if (helpers.isDatasetVisible(dataset)) {
 					dataset.controller.draw(ease);
 				}
-			}, this);
+			});
 
 			// Finally draw the tooltip
 			this.tooltip.transition(easingDecimal).draw();
@@ -316,9 +334,9 @@
 							elementsArray.push(element);
 							return elementsArray;
 						}
-					}, this);
+					});
 				}
-			}, this);
+			});
 
 			return elementsArray;
 		},
@@ -347,7 +365,7 @@
 				if(helpers.isDatasetVisible(dataset)){
 					elementsArray.push(dataset.metaData[found._index]);
 				}
-			}, this);
+			});
 
 			return elementsArray;
 		},

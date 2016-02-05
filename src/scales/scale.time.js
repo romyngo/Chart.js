@@ -57,7 +57,7 @@ try {
 
 			// defaults to unit's corresponding unitFormat below or override using pattern string from http://momentjs.com/docs/#/displaying/format/
 			displayFormats: {
-				'millisecond': 'SSS [ms]',
+				'millisecond': 'h:mm:ss.SSS a', // 11:20:01.123 AM,
 				'second': 'h:mm:ss a', // 11:20:01 AM
 				'minute': 'h:mm:ss a', // 11:20:01 AM
 				'hour': 'MMM D, hA', // Sept 4, 5PM
@@ -89,17 +89,8 @@ try {
 					scaleLabelMoments.push(labelMoment);
 				}, this);
 
-				if (this.options.time.min) {
-					this.firstTick = this.parseTime(this.options.time.min);
-				} else {
-					this.firstTick = moment.min.call(this, scaleLabelMoments);
-				}
-
-				if (this.options.time.max) {
-					this.lastTick = this.parseTime(this.options.time.max);
-				} else {
-					this.lastTick = moment.max.call(this, scaleLabelMoments);
-				}
+				this.firstTick = moment.min.call(this, scaleLabelMoments);
+				this.lastTick = moment.max.call(this, scaleLabelMoments);
 			} else {
 				this.firstTick = null;
 				this.lastTick = null;
@@ -128,6 +119,15 @@ try {
 				this.labelMoments.push(momentsForDataset);
 			}, this);
 
+			// Set these after we've done all the data 
+			if (this.options.time.min) {
+				this.firstTick = this.parseTime(this.options.time.min);
+			}
+
+			if (this.options.time.max) {
+				this.lastTick = this.parseTime(this.options.time.max);
+			}
+
 			// We will modify these, so clone for later
 			this.firstTick = (this.firstTick || moment()).clone();
 			this.lastTick = (this.lastTick || moment()).clone();
@@ -144,9 +144,9 @@ try {
 				this.tickRange = Math.ceil(this.lastTick.diff(this.firstTick, this.tickUnit, true));
 			} else {
 				// Determine the smallest needed unit of the time
-				var innerWidth = this.width - (this.paddingLeft + this.paddingRight);
+				var innerWidth = this.isHorizontal() ? this.width - (this.paddingLeft + this.paddingRight) : this.height - (this.paddingTop + this.paddingBottom);
 				var labelCapacity = innerWidth / (this.options.ticks.fontSize + 10);
-				var buffer = this.options.time.round ? 0 : 2;
+				var buffer = this.options.time.round ? 0 : 1;
 
 				// Start as small as possible
 				this.tickUnit = 'millisecond';
@@ -159,7 +159,6 @@ try {
 				// While we aren't ideal and we don't have units left 
 				while (unitDefinitionIndex < time.units.length) {
 					// Can we scale this unit. If `false` we can scale infinitely
-					//var canScaleUnit = ;
 					this.unitScale = 1;
 
 					if (helpers.isArray(unitDefinition.steps) && Math.ceil(this.tickRange / labelCapacity) < helpers.max(unitDefinition.steps)) {
@@ -188,8 +187,21 @@ try {
 				}
 			}
 
-			this.firstTick.startOf(this.tickUnit);
-			this.lastTick.endOf(this.tickUnit);
+			var roundedStart;
+
+			// Only round the first tick if we have no hard minimum
+			if (!this.options.time.min) {
+				this.firstTick.startOf(this.tickUnit);
+				roundedStart = this.firstTick;
+			} else {
+				roundedStart = this.firstTick.clone().startOf(this.tickUnit);
+			}
+			
+			// Only round the last tick if we have no hard maximum
+			if (!this.options.time.max) {
+				this.lastTick.endOf(this.tickUnit);
+			}
+
 			this.smallestLabelSeparation = this.width;
 
 			helpers.each(this.chart.data.datasets, function(dataset, datasetIndex) {
@@ -203,17 +215,30 @@ try {
 				this.displayFormat = this.options.time.displayFormat;
 			}
 
+			// first tick. will have been rounded correctly if options.time.min is not specified
+			this.ticks.push(this.firstTick.clone());
+
 			// For every unit in between the first and last moment, create a moment and add it to the ticks tick
-			for (var i = 0; i <= this.tickRange; ++i) {
-				if (i % this.unitScale === 0) {
-					this.ticks.push(this.firstTick.clone().add(i, this.tickUnit));
-				} else if (i === this.tickRange) {
-					// Expand out the last one if not an exact multiple
-					this.tickRange = Math.ceil(this.tickRange / this.unitScale) * this.unitScale;
-					this.ticks.push(this.firstTick.clone().add(this.tickRange, this.tickUnit));
-					this.lastTick = this.ticks[this.ticks.length - 1].clone();
+			for (var i = 1; i < this.tickRange; ++i) {
+				var newTick = roundedStart.clone().add(i, this.tickUnit);
+
+				// Are we greater than the max time
+				if (this.options.time.max && newTick.diff(this.lastTick, this.tickUnit, true) >= 0) {
 					break;
 				}
+
+				if (i % this.unitScale === 0) {
+					this.ticks.push(newTick);
+				}
+			}
+
+			// Always show the right tick
+			if (this.options.time.max) {
+				this.ticks.push(this.lastTick.clone());
+			} else if (this.ticks[this.ticks.length - 1].diff(this.lastTick, this.tickUnit, true) !== 0) {
+				this.tickRange = Math.ceil(this.tickRange / this.unitScale) * this.unitScale;
+				this.ticks.push(this.firstTick.clone().add(this.tickRange, this.tickUnit));
+				this.lastTick = this.ticks[this.ticks.length - 1].clone();
 			}
 		},
 		// Get tooltip label

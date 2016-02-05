@@ -23,8 +23,17 @@
 		},
 
 		tooltips: {
-			template: "(<%= value.x %>, <%= value.y %>, <%= value.r %>)",
-			multiTemplate: "<%if (datasetLabel){%><%=datasetLabel%>: <%}%>(<%= value.x %>, <%= value.y %>, <%= value.r %>)",
+			callbacks: {
+				title: function(tooltipItems, data) {
+					// Title doesn't make sense for scatter since we format the data as a point
+					return '';
+				},
+				label: function(tooltipItem, data) {
+					var datasetLabel = data.datasets[tooltipItem.datasetIndex].label || '';
+					var dataPoint = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
+					return datasetLabel + ': (' + dataPoint.x + ', ' + dataPoint.y + ', ' + dataPoint.r + ')';
+				}
+			}
 		},
 	};
 
@@ -131,7 +140,7 @@
 			helpers.each(this.getDataset().metaData, function(point, index) {
 				point.transition(easingDecimal);
 				point.draw();
-			}, this);
+			});
 
 		},
 

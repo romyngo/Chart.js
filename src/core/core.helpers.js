@@ -8,24 +8,24 @@ var color = require('color');
 
 	//-- Basic js utility methods
 	helpers.each = function(loopable, callback, self, reverse) {
-		var additionalArgs = Array.prototype.slice.call(arguments, 3);
 		// Check to see if null or undefined firstly.
-		if (loopable) {
-			if (loopable.length === +loopable.length) {
-				var i;
-				if (reverse) {
-					for (i = loopable.length - 1; i >= 0; i--) {
-						callback.apply(self, [loopable[i], i].concat(additionalArgs));
-					}
-				} else {
-					for (i = 0; i < loopable.length; i++) {
-						callback.apply(self, [loopable[i], i].concat(additionalArgs));
-					}
+		var i, len;
+		if (helpers.isArray(loopable)) {
+			len = loopable.length;
+			if (reverse) {
+				for (i = len - 1; i >= 0; i--) {
+					callback.call(self, loopable[i], i);
 				}
 			} else {
-				for (var item in loopable) {
-					callback.apply(self, [loopable[item], item].concat(additionalArgs));
+				for (i = 0; i < len; i++) {
+					callback.call(self, loopable[i], i);
 				}
+			}
+		} else if (typeof loopable === 'object') {
+			var keys = Object.keys(loopable);
+			len = keys.length;
+			for (i = 0; i < len; i++) {
+				callback.call(self, loopable[keys[i]], keys[i]);
 			}
 		}
 	};
@@ -45,7 +45,12 @@ var color = require('color');
 		return objClone;
 	};
 	helpers.extend = function(base) {
-		helpers.each(Array.prototype.slice.call(arguments, 1), function(extensionObject) {
+		var len = arguments.length;
+		var additionalArgs = [];
+		for(var i = 1; i < len; i++) {
+			additionalArgs.push(arguments[i]);
+		}
+		helpers.each(additionalArgs, function(extensionObject) {
 			helpers.each(extensionObject, function(value, key) {
 				if (extensionObject.hasOwnProperty(key)) {
 					base[key] = value;
@@ -257,10 +262,22 @@ var color = require('color');
 		return !isNaN(parseFloat(n)) && isFinite(n);
 	};
 	helpers.max = function(array) {
-		return Math.max.apply(Math, array);
+		return array.reduce(function(max, value) {
+			if (!isNaN(value)) {
+				return Math.max(max, value);
+			} else {
+				return max;
+			}
+		}, Number.NEGATIVE_INFINITY);
 	};
 	helpers.min = function(array) {
-		return Math.min.apply(Math, array);
+		return array.reduce(function(min, value) {
+			if (!isNaN(value)) {
+				return Math.min(min, value);
+			} else {
+				return min;
+			}
+		}, Number.POSITIVE_INFINITY);
 	};
 	helpers.sign = function(x) {
 		if (Math.sign) {
@@ -748,13 +765,37 @@ var color = require('color');
 	helpers.fontString = function(pixelSize, fontStyle, fontFamily) {
 		return fontStyle + " " + pixelSize + "px " + fontFamily;
 	};
-	helpers.longestText = function(ctx, font, arrayOfStrings) {
+	helpers.longestText = function(ctx, font, arrayOfStrings, cache) {
+		cache = cache || {};
+		cache.data = cache.data || {};
+		cache.garbageCollect = cache.garbageCollect || [];
+
+		if (cache.font !== font) {
+			cache.data = {};
+			cache.garbageCollect = [];
+			cache.font = font;
+		}
+
 		ctx.font = font;
 		var longest = 0;
 		helpers.each(arrayOfStrings, function(string) {
-			var textWidth = ctx.measureText(string).width;
-			longest = (textWidth > longest) ? textWidth : longest;
+			var textWidth = cache.data[string];
+			if (!textWidth) {
+				textWidth = cache.data[string] = ctx.measureText(string).width;
+				cache.garbageCollect.push(string);
+			}
+			if (textWidth > longest)
+				longest = textWidth;
 		});
+
+		var gcLen = cache.garbageCollect.length / 2;
+		if (gcLen > arrayOfStrings.length) {
+			for (var i = 0; i < gcLen; i++) {
+				var key = cache.garbageCollect.shift();
+				delete cache.data[key];
+			}
+		}
+
 		return longest;
 	};
 	helpers.drawRoundedRectangle = function(ctx, x, y, width, height, radius) {

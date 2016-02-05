@@ -20,10 +20,10 @@
 
 		// scale label
 		scaleLabel: {
-			fontColor: '#666',
-			fontFamily: 'Helvetica Neue',
-			fontSize: 12,
-			fontStyle: 'normal',
+			fontColor: Chart.defaults.global.defaultFontColor,
+			fontFamily: Chart.defaults.global.defaultFontFamily,
+			fontSize: Chart.defaults.global.defaultFontSize,
+			fontStyle: Chart.defaults.global.defaultFontStyle,
 
 			// actual label
 			labelString: '',
@@ -35,10 +35,10 @@
 		// label settings
 		ticks: {
 			beginAtZero: false,
-			fontSize: 12,
-			fontStyle: "normal",
-			fontColor: "#666",
-			fontFamily: "Helvetica Neue",
+			fontSize: Chart.defaults.global.defaultFontSize,
+			fontStyle: Chart.defaults.global.defaultFontStyle,
+			fontColor: Chart.defaults.global.defaultFontColor,
+			fontFamily: Chart.defaults.global.defaultFontFamily,
 			maxRotation: 90,
 			mirror: false,
 			padding: 10,
@@ -202,7 +202,10 @@
 					this.paddingRight = lastWidth / 2 + 3;
 					this.paddingLeft = firstWidth / 2 + 3;
 
-					var originalLabelWidth = helpers.longestText(this.ctx, labelFont, this.ticks);
+					if (!this.longestTextCache) {
+						this.longestTextCache = {};
+					}
+					var originalLabelWidth = helpers.longestText(this.ctx, labelFont, this.ticks, this.longestTextCache);
 					var labelWidth = originalLabelWidth;
 					var cosRotation;
 					var sinRotation;
@@ -287,9 +290,15 @@
 				var labelFont = helpers.fontString(this.options.ticks.fontSize,
 					this.options.ticks.fontStyle, this.options.ticks.fontFamily);
 
+				if (!this.longestTextCache) {
+					this.longestTextCache = {};
+				}
+
+				var largestTextWidth = helpers.longestText(this.ctx, labelFont, this.ticks, this.longestTextCache);
+
 				if (this.isHorizontal()) {
 					// A horizontal axis is more constrained by the height.
-					this.longestLabelWidth = helpers.longestText(this.ctx, labelFont, this.ticks);
+					this.longestLabelWidth = largestTextWidth;
 
 					// TODO - improve this calculation
 					var labelHeight = (Math.sin(helpers.toRadians(this.labelRotation)) * this.longestLabelWidth) + 1.5 * this.options.ticks.fontSize;
@@ -311,7 +320,6 @@
 				} else {
 					// A vertical axis is more constrained by the width. Labels are the dominant factor here, so get that length first
 					var maxLabelWidth = this.maxWidth - this.minSize.width;
-					var largestTextWidth = helpers.longestText(this.ctx, labelFont, this.ticks);
 
 					// Account for padding
 					if (!this.options.ticks.mirror) {
@@ -430,6 +438,14 @@
 				var scaleLabelY;
 				var useAutoskipper = this.options.ticks.autoSkip;
 
+
+				// figure out the maximum number of gridlines to show
+				var maxTicks;
+
+				if (this.options.ticks.maxTicksLimit) {
+					maxTicks = this.options.ticks.maxTicksLimit;
+				}
+
 				// Make sure we draw text in the correct color and font
 				this.ctx.fillStyle = this.options.ticks.fontColor;
 				var labelFont = helpers.fontString(this.options.ticks.fontSize, this.options.ticks.fontStyle, this.options.ticks.fontFamily);
@@ -452,10 +468,23 @@
 					if (!useAutoskipper) {
 						skipRatio = false;
 					}
+
+					// if they defined a max number of ticks, 
+					// increase skipRatio until that number is met
+					if (maxTicks && this.ticks.length > maxTicks) {
+						while (!skipRatio || this.ticks.length / (skipRatio || 1) > maxTicks) {
+							if (!skipRatio) {
+								skipRatio = 1;
+							}
+							skipRatio += 1;
+						}
+					}
 					
 					helpers.each(this.ticks, function(label, index) {
 						// Blank ticks
-						if ((skipRatio > 1 && index % skipRatio > 0) || (label === undefined || label === null)) {
+						var isLastTick = this.ticks.length == index + 1;
+						var shouldSkip = skipRatio > 1 && index % skipRatio > 0;
+						if (shouldSkip && !isLastTick || (label === undefined || label === null)) {
 							return;
 						}
 						var xLineValue = this.getPixelForTick(index); // xvalues for grid lines
@@ -630,6 +659,7 @@
 					x2 += helpers.aliasPixel(this.ctx.lineWidth);
 				}
 
+				this.ctx.beginPath();
 				this.ctx.moveTo(x1, y1);
 				this.ctx.lineTo(x2, y2);
 				this.ctx.stroke();
