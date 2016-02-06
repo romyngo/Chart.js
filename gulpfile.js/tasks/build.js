@@ -36,6 +36,8 @@ function buildTask() {
 				errorDetails: true
 			}));
 		}))
+		.pipe(concat('Chart.js'))
+		.pipe(gulp.dest(config.root.dest))
 		.pipe(uglify({
 			preserveComments: 'some'
 		}))
