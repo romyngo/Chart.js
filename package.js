@@ -11,12 +11,12 @@ Package.describe({
 Package.onUse(function(api) {
   api.versionsFrom('1.2.1');
   api.use('ecmascript');
-  api.addFiles('chartjs.js');
+  api.addFiles(['chartjs.js', 'Chart.js'], 'client');
 });
 
 Package.onTest(function(api) {
   api.use('ecmascript');
   api.use('tinytest');
   api.use('romy:chartjs');
-  api.addFiles('chartjs-tests.js');
+  api.addFiles('chartjs-tests.js', 'client');
 });
