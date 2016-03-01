@@ -4,7 +4,7 @@ Package.describe({
   // Brief, one-line summary of the package.
   summary: 'Chart.js meteor wrapper',
   // URL to the Git repository containing the source code for this package.
-  git: 'https://github.com/romyngo/Chart.js.git',
+  git: 'https://github.com/romyngo/meteor-chartjs.git',
   documentation: 'README.md',
 });
 
